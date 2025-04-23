@@ -1,0 +1,20 @@
+Python Developer Position
+
+We are looking for a skilled Python developer with the following qualifications:
+
+- 3+ years of experience in Python development
+- Strong knowledge of web frameworks (Django/Flask)
+- Experience with database systems (PostgreSQL, MongoDB)
+- Familiarity with RESTful APIs
+- Understanding of software development best practices
+- Experience with version control (Git)
+- Good problem-solving skills
+- Strong communication abilities
+
+Responsibilities:
+- Develop and maintain Python applications
+- Write clean, maintainable code
+- Collaborate with team members
+- Participate in code reviews
+- Debug and fix issues
+- Implement new features 
