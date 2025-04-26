@@ -17,7 +17,11 @@ load_dotenv()
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Initialize session state
+# Initialize session state for API key verification
+if 'api_key_verified' not in st.session_state:
+    st.session_state.api_key_verified = False
+
+# Initialize other session states
 if "requirements" not in st.session_state:
     st.session_state.requirements = None
 if "job_description" not in st.session_state:
@@ -445,79 +449,102 @@ def flatten_analysis_for_csv(analysis):
 
     return flattened
 
-# Main page content
+# Main page title
 st.title("Resume Ranking System")
 
-# 🔐 ChatGPT Key and Model Selection
-with st.container():
-    st.header("🔐 ChatGPT Key and Model Selection")
+# API Key Verification Section
+st.header("🔐 API Key Verification")
 
-    # 1. Ask for the ChatGPT API key
+if not st.session_state.api_key_verified:
     api_key = st.text_input("Enter your OpenAI API Key", type="password")
+    
+    if st.button("Verify API Key"):
+        if api_key:
+            try:
+                # Try to create a client and make a simple API call
+                client = OpenAI(api_key=api_key)
+                response = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[{"role": "user", "content": "Test"}],
+                    max_tokens=5
+                )
+                # If no error, key is valid
+                st.session_state.api_key_verified = True
+                os.environ["OPENAI_API_KEY"] = api_key  # Set the API key
+                st.success("✅ API Key verified successfully!")
+                st.rerun()
+            except Exception as e:
+                st.error("❌ Invalid API Key. Please check and try again.")
+        else:
+            st.warning("⚠️ Please enter an API Key.")
+    st.stop()  # Stop here if not verified
 
-    # 2. Model selection
-    st.subheader("Select Models")
+# If verified, show the rest of the app
+st.success("✅ API Key verified and active")
+if st.button("Change API Key"):
+    st.session_state.api_key_verified = False
+    st.rerun()
 
-    model_1 = st.selectbox(
-        "Choose the primary model (general purpose)",
-        ["gpt-4.1", "gpt-4.0", "gpt-3.5-turbo"]
-    )
+st.divider()
 
-    model_2 = st.selectbox(
-        "Choose a reasoning-focused model",
-        ["o4-mini", "o1-mini", "o1-preview"]
-    )
+# Model Selection Section
+st.header("Model Selection")
 
-    # Optional: Display selected inputs
-    if st.button("Submit"):
-        st.session_state.selected_models = {
-            "primary": model_1,
-            "reasoning": model_2
-        }
-        st.markdown("### 🔑 Your Inputs")
-        st.write("API Key:", api_key[:4] + "..." if api_key else "Not provided")
-        st.write("Primary Model:", model_1)
-        st.write("Reasoning Model:", model_2)
+model_1 = st.selectbox(
+    "Choose the primary model (general purpose)",
+    ["gpt-4.1", "gpt-4.0", "gpt-3.5-turbo"]
+)
 
-st.divider()  # Visual break
+model_2 = st.selectbox(
+    "Choose a reasoning-focused model",
+    ["o4-mini", "o1-mini", "o1-preview"]
+)
+
+if st.button("Update Models"):
+    st.session_state.selected_models = {
+        "primary": model_1,
+        "reasoning": model_2
+    }
+    st.success("✅ Models updated successfully!")
+
+st.divider()
 
 # Job Description Section
-with st.container():
-    st.header("Job Description Analysis")
-    
-    # Keep job description input visible
-    job_description = st.text_area("Enter Job Description:", 
-                                value=st.session_state.job_description if st.session_state.job_description else "",
-                                height=200)
+st.header("Job Description Analysis")
 
-    if st.button("Analyze Job Description"):
-        if not job_description:
-            st.error("Please provide a job description.")
-        else:
-            with st.spinner("Analyzing job description..."):
-                requirements = analyze_job_description(job_description, model=st.session_state.selected_models["primary"])
-                
-                if requirements:
-                    st.session_state.job_description = job_description
-                    formatted_reqs = format_requirements_for_editing(requirements)
-                    st.session_state.formatted_reqs = formatted_reqs
-                    st.session_state.requirements = requirements
-                    st.success("✅ Job requirements have been extracted and saved!")
-                else:
-                    st.error("Failed to analyze job description. Please try again.")
+# Keep job description input visible
+job_description = st.text_area("Enter Job Description:", 
+                          value=st.session_state.job_description if st.session_state.job_description else "",
+                          height=200)
 
-# Always show the requirements fields if they exist
+if st.button("Analyze Job Description"):
+    if not job_description:
+        st.error("Please provide a job description.")
+    else:
+        with st.spinner("Analyzing job description..."):
+            requirements = analyze_job_description(job_description, model=st.session_state.selected_models["primary"])
+            
+            if requirements:
+                st.session_state.job_description = job_description
+                formatted_reqs = format_requirements_for_editing(requirements)
+                st.session_state.formatted_reqs = formatted_reqs
+                st.session_state.requirements = requirements
+                st.success("✅ Job requirements have been extracted and saved!")
+            else:
+                st.error("Failed to analyze job description. Please try again.")
+
+# Show requirements fields only if they exist
 if st.session_state.formatted_reqs:
     st.subheader("Edit Requirements")
     must_have_edit = st.text_area("Must-Have Requirements:", 
-                           value=st.session_state.formatted_reqs["must_have"],
-                           height=200)
+                       value=st.session_state.formatted_reqs["must_have"],
+                       height=200)
     preferred_edit = st.text_area("Preferred Requirements:", 
-                           value=st.session_state.formatted_reqs["preferred"],
-                           height=200)
+                       value=st.session_state.formatted_reqs["preferred"],
+                       height=200)
     additional_edit = st.text_area("Additional Screening Criteria:", 
-                            value=st.session_state.formatted_reqs["additional"],
-                            height=200)
+                        value=st.session_state.formatted_reqs["additional"],
+                        height=200)
     
     if st.button("Update Requirements"):
         edited_requirements = parse_edited_requirements(must_have_edit, preferred_edit, additional_edit)
@@ -526,19 +553,17 @@ if st.session_state.formatted_reqs:
             st.session_state.requirements = edited_requirements
             st.session_state.formatted_reqs = format_requirements_for_editing(edited_requirements)
             st.success("✅ Requirements updated successfully!")
-            st.experimental_rerun() 
+            st.rerun()
+
+st.divider()
 
 # Resume Analysis Section
-st.header("Resume Analysis")
-
-if st.session_state.requirements is None:
-    st.info("Please analyze a job description first to proceed with resume analysis.")
-else:
-    st.subheader("Upload Resumes")
+if st.session_state.requirements is not None:
+    st.header("Resume Analysis")
     uploaded_files = st.file_uploader("Upload Resumes (PDF, DOCX, or TXT)", 
                                     accept_multiple_files=True)
     
-    if st.button("Analyze Resumes") and uploaded_files:
+    if uploaded_files and st.button("Analyze Resumes"):
         # Initialize session state for results if not exists
         if 'resume_results' not in st.session_state:
             st.session_state.resume_results = []
