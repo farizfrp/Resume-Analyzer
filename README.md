@@ -4,20 +4,44 @@ A powerful resume analysis tool that compares candidate resumes against job desc
 
 ## 🌟 Features
 
-- **Real-time Analysis**: Process multiple resumes simultaneously with live results
-- **Smart Matching**: AI-powered comparison of resumes against job requirements
-- **Detailed Analysis**:
+- **API Key Management**:
+  - Secure API key verification
+  - Easy key validation and updates
+  - Safe storage of credentials
+
+- **Flexible Model Selection**:
+  - Choose between different GPT models for analysis
+  - Primary model for job description analysis
+  - Specialized reasoning model for resume evaluation
+
+- **Real-time Analysis**:
+  - Process multiple resumes simultaneously
+  - Live progress tracking
+  - Instant results display
+
+- **Smart Matching**:
+  - AI-powered comparison of resumes against job requirements
+  - Detailed requirement matching
+  - Percentage-based scoring system
+
+- **Comprehensive Analysis**:
   - Technical skills assessment
   - Core responsibility matching
   - Qualitative evaluation of experience
   - Project gravity analysis
   - Candidate fit scoring
+  - Recruiter-style summaries
+
 - **Interactive Results**:
+  - Clean, modern UI with expandable sections
   - Percentage match scores
   - Detailed requirement breakdowns
-  - Recruiter-style summaries
   - Final recommendations with key factors
-- **Export Functionality**: Download complete analysis results as CSV
+  - Color-coded qualitative assessments
+
+- **Export Functionality**:
+  - Download complete analysis results as CSV
+  - Structured data export for further processing
 
 ## 🚀 Getting Started
 
@@ -40,12 +64,13 @@ cd Resume-Analyzer
 pip install -r requirements.txt
 ```
 
-3. Set up your environment variables:
+3. Set up your environment variables (optional):
    - Create a `.env` file in the root directory
    - Add your OpenAI API key:
 ```
 OPENAI_API_KEY=your_api_key_here
 ```
+   - Note: You can also enter your API key directly in the application
 
 ### Running the Application
 
@@ -58,20 +83,58 @@ streamlit run app.py
 
 ## 📝 Usage
 
-1. **Enter OpenAI API Key**
-   - Input your OpenAI API key
-   - Select preferred models for analysis
+1. **API Key Setup**
+   - Enter your OpenAI API key when prompted
+   - The key will be verified before proceeding
+   - You can change the API key at any time
 
-2. **Job Description Analysis**
+2. **Model Selection**
+   - Choose your preferred primary model for job description analysis
+   - Select a reasoning-focused model for resume evaluation
+   - Update models as needed during usage
+
+3. **Job Description Analysis**
    - Paste the job description
    - Click "Analyze Job Description"
    - Review and edit extracted requirements if needed
 
-3. **Resume Analysis**
-   - Upload one or multiple resumes (PDF, DOCX, or TXT)
+4. **Resume Analysis**
+   - Upload one or more resumes (PDF, DOCX, or TXT)
    - Click "Analyze Resumes"
-   - Watch real-time analysis results
-   - Download complete analysis as CSV when finished
+   - View real-time analysis progress
+   - Review detailed results for each candidate
+
+5. **Results Review**
+   - Examine detailed matching scores
+   - Review qualitative assessments
+   - Read recruiter-style summaries
+   - Check final recommendations
+   - Export results to CSV if needed
+
+## 🔒 Security
+
+- API keys are securely handled and not stored permanently
+- All analysis is performed through secure API calls
+- No resume data is stored after analysis
+
+## 📊 Output Format
+
+The analysis provides:
+- Overall match percentage
+- Technical skills assessment
+- Core responsibilities matching
+- Experience and qualification verification
+- Project evaluation
+- Detailed recommendations
+- Exportable CSV report
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 🔍 Analysis Components
 
@@ -111,14 +174,6 @@ The exported CSV includes detailed columns for:
 - Screening criteria results
 - Qualitative assessments
 - Final recommendations
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 🙏 Acknowledgments
 
