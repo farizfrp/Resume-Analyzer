@@ -1,10 +1,16 @@
-# Resume Analysis System
+# 🏢 Resume Analysis System
 
 A powerful resume analysis tool that compares candidate resumes against job descriptions using AI to provide detailed insights and rankings. Built by [Mercity-AI](https://www.mercity.ai/).
+
+## 🔖 Detailed Guide!
+Read the full detailed guide on how to build such an AI Automated ATS system on our blog here:
+[https://www.mercity.ai/blog-post/build-an-llm-based-resume-analyzer](https://www.mercity.ai/blog-post/build-an-llm-based-resume-analyzer)
 
 ## 🎥 Demo
 
 🎥 [Check out our demo video!](https://www.loom.com/share/3985f56862074443b058e705fc47590a?sid=c73d3e56-d262-491b-8a1d-9fc49a89bc41)
+
+![Thumbnail](https://cdn.loom.com/sessions/thumbnails/3985f56862074443b058e705fc47590a-9419d6167151bfb4.gif)
 
 ## 🌟 Features
 
