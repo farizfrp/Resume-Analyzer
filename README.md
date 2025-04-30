@@ -1,6 +1,6 @@
 # Resume Analysis System
 
-A powerful resume analysis tool that compares candidate resumes against job descriptions using AI to provide detailed insights and rankings. Built by [Mercity-AI](https://github.com/Mercity-AI).
+A powerful resume analysis tool that compares candidate resumes against job descriptions using AI to provide detailed insights and rankings. Built by [Mercity-AI](https://www.mercity.ai/).
 
 ## 🎥 Demo
 
@@ -8,15 +8,7 @@ A powerful resume analysis tool that compares candidate resumes against job desc
 
 ## 🌟 Features
 
-- **API Key Management**:
-  - Secure API key verification
-  - Easy key validation and updates
-  - Safe storage of credentials
-
-- **Flexible Model Selection**:
-  - Choose between different GPT models for analysis
-  - Primary model for job description analysis
-  - Specialized reasoning model for resume evaluation
+![Requirements Match Summary Example](assets/requirements-match-summary.png)
 
 - **Real-time Analysis**:
   - Process multiple resumes simultaneously
