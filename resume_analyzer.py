@@ -46,23 +46,14 @@ Additional Screening Criteria:
                     "role": "system",
                     "content": """You are a recruiter evaluating a candidate's resume against a given job description (JD). Based on the JD, evaluate whether the candidate meets the necessary requirements.
 
-                    ## Step 1: Extract Contact Information
-                    First, extract all contact information from the resume:
-                    - Full Name
-                    - Email Address
-                    - Phone Number
-                    - Location
-                    - LinkedIn URL (if provided)
-                    - Other social/portfolio links
-
-                    ## Step 2: Quantitative Check
+                    ## Step 1: Quantitative Check
                     Perform a Boolean (true/false) check for each requirement based on the candidate's resume:
 
                     - For each skill listed in `must_have_requirements` and `good_to_have_requirements`, determine if the candidate possesses it. Return true or false for each.
                     - For each `core_responsibility`, determine if the candidate has demonstrated it in their past work. Return true or false.
                     - For each `additional_screening_criteria`, return a boolean value indicating whether the candidate meets the condition (e.g., full-time, onsite position, work authorization, etc.).
 
-                    ## Step 3: Qualitative Assessment
+                    ## Step 2: Qualitative Assessment
                     Now, switch to a recruiter-style qualitative assessment. Use your **intuition like a human** — go beyond what's explicitly stated. Read between the lines, infer intent, and use contextual clues from the resume and the JD to judge fit. Reference the results from Step 1 as part of your reasoning.
 
                     Assess the following:
@@ -73,7 +64,7 @@ Additional Screening Criteria:
                     - **Transferability to Role**: How well would their experience transfer to this particular role? Will they onboard quickly?
                     - **Bonus Experience & Extra Qualifications**: If the JD lists any bonus criteria (e.g., fintech, B2B SaaS), consider that a positive signal even if not part of Step 1.
 
-                    ## Step 4: Final Recommendation
+                    ## Step 3: Final Recommendation
                     After both steps, make a final call. Output "Yes" or "No" and summarize your reasoning concisely.
 
                     ---
@@ -81,47 +72,39 @@ Additional Screening Criteria:
                     ### Output Format (strictly follow this JSON structure):
 
                     {
-                    "contact_info": {
-                        "full_name": "John Doe",
-                        "email": "john.doe@email.com",
-                        "phone": "+1-123-456-7890",
-                        "location": "San Francisco, CA",
-                        "linkedin": "https://linkedin.com/in/johndoe",
-                        "other_links": ["github.com/johndoe", "johndoe.com"]
-                    },
                     "requirement_match": {
                         "must_have_requirements": {
-                            "technical_skills": {
-                                "JavaScript": true,
-                                "React.js": true,
-                                "Node.js": true,
-                                "SQL databases (especially PostgreSQL)": true,
-                                "Version control systems (e.g., Git)": true
-                            },
-                            "experience": true,
-                            "qualifications": true,
-                            "core_responsibilities": {
-                                "Build and maintain scalable frontend components using React.js": true,
-                                "Develop backend services using Node.js and PostgreSQL": true,
-                                "Integrate with third-party APIs and internal microservices": true,
-                                "Participate in code reviews, sprint planning, and architectural discussions": false,
-                                "Write unit and integration tests with Jest/Mocha": true
-                            }
+                        "technical_skills": {
+                            "JavaScript": true,
+                            "React.js": true,
+                            "Node.js": true,
+                            "SQL databases (especially PostgreSQL)": true,
+                            "Version control systems (e.g., Git)": true
+                        },
+                        "experience": true,
+                        "qualifications": true,
+                        "core_responsibilities": {
+                            "Build and maintain scalable frontend components using React.js": true,
+                            "Develop backend services using Node.js and PostgreSQL": true,
+                            "Integrate with third-party APIs and internal microservices": true,
+                            "Participate in code reviews, sprint planning, and architectural discussions": false,
+                            "Write unit and integration tests with Jest/Mocha": true
+                        }
                         },
                         "good_to_have_requirements": {
-                            "additional_skills": {
-                                "TypeScript": true,
-                                "GraphQL": false,
-                                "CI/CD pipelines": true,
-                                "Docker": true,
-                                "Strong understanding of security best practices": false
-                            }
+                        "additional_skills": {
+                            "TypeScript": true,
+                            "GraphQL": false,
+                            "CI/CD pipelines": true,
+                            "Docker": true,
+                            "Strong understanding of security best practices": false
+                        }
                         },
                         "additional_screening_criteria": {
-                            "Position is full-time and onsite at Bangalore office": true,
-                            "Fresh graduates and part-time applicants will not be considered": false,
-                            "Open only to candidates with valid Indian work authorization": true,
-                            "Applications from women and underrepresented groups are especially encouraged": true
+                        "Position is full-time and onsite at Bangalore office": true,
+                        "Fresh graduates and part-time applicants will not be considered": false,
+                        "Open only to candidates with valid Indian work authorization": true,
+                        "Applications from women and underrepresented groups are especially encouraged": true
                         }
                     },
                     "qualitative_assessment": {
@@ -143,7 +126,7 @@ Additional Screening Criteria:
                 },
                 {
                     "role": "user",
-                    "content": f"""You are a recruiter evaluating a candidate's resume against a given job description. First, carefully extract all contact information (full name, email, phone, location, LinkedIn URL, and any other professional links) from the resume. Then assess if the candidate meets each required skill, responsibility, and screening criterion. Then, provide a qualitative assessment, including inferred skills, project impact, ownership, and transferability, while considering the context beyond what's explicitly stated. Finally, give a recommendation ("Yes" or "No") with a brief explanation of the key factors that influenced your decision.
+                    "content": f"""You are a recruiter evaluating a candidate's resume against a given job description. Act like a human recruiter—use your intuition and read between the lines to assess the candidate's suitability. First, perform a quantitative check to determine if the candidate meets each required skill, responsibility, and screening criterion. Then, provide a qualitative assessment, including inferred skills, project impact, ownership, and transferability, while considering the context beyond what's explicitly stated. Finally, give a recommendation ("Yes" or "No") with a brief explanation of the key factors that influenced your decision.
 
                     ## Job Requirements:
                     {requirements_str}
@@ -151,7 +134,7 @@ Additional Screening Criteria:
                     ## Resume:
                     {resume_text}
 
-                    Output ONLY the JSON object as specified in the system prompt, with no additional text or formatting. Make sure to include all contact information found in the resume in the contact_info section."""
+                    Output ONLY the JSON object as specified in the system prompt, with no additional text or formatting."""
                 }
             ],
         
@@ -164,20 +147,6 @@ Additional Screening Criteria:
         
         # Parse the response into a dictionary
         analysis = json.loads(response.choices[0].message.content)
-        
-        # Ensure contact_info exists and has all required fields with N/A as default
-        if 'contact_info' not in analysis:
-            analysis['contact_info'] = {}
-        
-        # Set default N/A values for missing contact fields
-        default_fields = ["full_name", "email", "phone", "location", "linkedin"]
-        for field in default_fields:
-            if field not in analysis['contact_info'] or not analysis['contact_info'][field]:
-                analysis['contact_info'][field] = "N/A"
-        
-        # Ensure other_links exists as empty list if not present
-        if 'other_links' not in analysis['contact_info'] or not analysis['contact_info']['other_links']:
-            analysis['contact_info']['other_links'] = []
         
         # Calculate score based on the analysis
         score = calculate_score(analysis)

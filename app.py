@@ -456,6 +456,7 @@ st.title("Resume Ranking System")
 st.header("🔐 API Key Verification")
 
 if not st.session_state.api_key_verified:
+    # Keep the API key input field enabled
     api_key = st.text_input("Enter your OpenAI API Key", type="password")
     
     if st.button("Verify API Key"):
@@ -477,6 +478,41 @@ if not st.session_state.api_key_verified:
                 st.error("❌ Invalid API Key. Please check and try again.")
         else:
             st.warning("⚠️ Please enter an API Key.")
+    
+    # Show the rest of the app but disable functionality
+    st.warning("⚠️ Please enter a valid API key to enable all features.")
+    st.divider()
+    
+    # Model Selection Section (disabled)
+    st.header("Model Selection")
+    st.selectbox(
+        "Choose the primary model (general purpose)",
+        ["gpt-4.1", "gpt-4.0", "gpt-3.5-turbo"],
+        disabled=True
+    )
+    st.selectbox(
+        "Choose a reasoning-focused model",
+        ["o4-mini", "o1-mini", "o1-preview"],
+        disabled=True
+    )
+    st.button("Update Models", disabled=True)
+    
+    st.divider()
+    
+    # Job Description Section (disabled)
+    st.header("Job Description Analysis")
+    st.text_area("Enter Job Description:", height=200, disabled=True)
+    st.button("Analyze Job Description", disabled=True)
+    
+    st.divider()
+    
+    # Resume Analysis Section (disabled)
+    st.header("Resume Analysis")
+    st.file_uploader("Upload Resumes (PDF, DOCX, or TXT)", 
+                    accept_multiple_files=True,
+                    disabled=True)
+    st.button("Analyze Resumes", disabled=True)
+    
     st.stop()  # Stop here if not verified
 
 # If verified, show the rest of the app

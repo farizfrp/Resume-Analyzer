@@ -2,6 +2,20 @@
 
 A powerful resume analysis tool that compares candidate resumes against job descriptions using AI to provide detailed insights and rankings. Built by [Mercity-AI](https://github.com/Mercity-AI).
 
+## 🎥 Demo
+
+Check out our demo video to see the Resume Analysis System in action:
+
+<div style="position: relative; padding-bottom: 56.25%; height: 0;">
+    <iframe src="https://www.loom.com/embed/3985f56862074443b058e705fc47590a?sid=c73d3e56-d262-491b-8a1d-9fc49a89bc41" 
+            frameborder="0" 
+            webkitallowfullscreen 
+            mozallowfullscreen 
+            allowfullscreen 
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+    </iframe>
+</div>
+
 ## 🌟 Features
 
 - **API Key Management**:
