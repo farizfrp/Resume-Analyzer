@@ -1,4 +1,9 @@
 [server]
 headless = true
 port = 8008
-enableWebsockets = false 
+enableWebsockets = false
+enableCORS = false
+
+[browser]
+serverAddress = "alpha-ats.boga.co.id"
+gatherUsageStats = false 
