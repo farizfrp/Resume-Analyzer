@@ -39,6 +39,13 @@ Additional Screening Criteria:
 {json.dumps(requirements.get('additional_screening_criteria', []), indent=2)}
 """
         
+        # Debug: Log the requirements being used
+        print("\n" + "="*80)
+        print("JOB REQUIREMENTS BEING USED FOR ANALYSIS:")
+        print("="*80)
+        print(requirements_str)
+        print("="*80)
+        
         response = client.chat.completions.create(
             model=model,
             messages=[
@@ -46,12 +53,27 @@ Additional Screening Criteria:
                     "role": "system",
                     "content": """You are a recruiter evaluating a candidate's resume against a given job description (JD). Based on the JD, evaluate whether the candidate meets the necessary requirements.
 
+                    ## Step 0: Contact Information Extraction
+                    First, extract all available contact information from the resume:
+                    - **Full Name**: Extract the candidate's complete name
+                    - **Email**: Extract email address if available
+                    - **Phone**: Extract phone number if available  
+                    - **Location**: Extract current location/address if available
+                    - **LinkedIn**: Extract LinkedIn profile URL if available
+                    - **Other Links**: Extract any other social media profiles, portfolio links, GitHub, etc.
+                    - **Age**: Extract or infer age if mentioned (use "N/A" if not available)
+                    - **Gender**: Extract or infer gender if mentioned (use "N/A" if not available)
+                    - **Total Work Experience**: Calculate total years of professional work experience based on employment history
+                    - **Last Position**: Extract the most recent job title and company name
+
                     ## Step 1: Quantitative Check
                     Perform a Boolean (true/false) check for each requirement based on the candidate's resume:
 
                     - For each skill listed in `must_have_requirements` and `good_to_have_requirements`, determine if the candidate possesses it. Return true or false for each.
-                    - For each `core_responsibility`, determine if the candidate has demonstrated it in their past work. Return true or false.
+                    - For each `core_responsibility`, determine if the candidate has demonstrated SIMILAR or RELATED experience in their past work. Be flexible - if they have done something similar or transferable, mark it as true. Don't require exact word-for-word matches.
                     - For each `additional_screening_criteria`, return a boolean value indicating whether the candidate meets the condition (e.g., full-time, onsite position, work authorization, etc.).
+                    
+                    **Important**: Be generous in matching core responsibilities. If a candidate has done mobile development, API integration, or similar work, consider it a match even if the exact wording is different.
 
                     ## Step 2: Qualitative Assessment
                     Now, switch to a recruiter-style qualitative assessment. Use your **intuition like a human** — go beyond what's explicitly stated. Read between the lines, infer intent, and use contextual clues from the resume and the JD to judge fit. Reference the results from Step 1 as part of your reasoning.
@@ -72,6 +94,18 @@ Additional Screening Criteria:
                     ### Output Format (strictly follow this JSON structure):
 
                     {
+                    "contact_info": {
+                        "full_name": "John Doe",
+                        "email": "john.doe@email.com",
+                        "phone": "+1-555-123-4567",
+                        "location": "San Francisco, CA",
+                        "linkedin": "https://linkedin.com/in/johndoe",
+                        "other_links": ["github.com/johndoe", "portfolio.johndoe.com"],
+                        "age": "28",
+                        "gender": "Male",
+                        "total_work_experience": "5 years",
+                        "last_position": "Senior Software Engineer at Tech Corp"
+                    },
                     "requirement_match": {
                         "must_have_requirements": {
                         "technical_skills": {
@@ -126,7 +160,15 @@ Additional Screening Criteria:
                 },
                 {
                     "role": "user",
-                    "content": f"""You are a recruiter evaluating a candidate's resume against a given job description. Act like a human recruiter—use your intuition and read between the lines to assess the candidate's suitability. First, perform a quantitative check to determine if the candidate meets each required skill, responsibility, and screening criterion. Then, provide a qualitative assessment, including inferred skills, project impact, ownership, and transferability, while considering the context beyond what's explicitly stated. Finally, give a recommendation ("Yes" or "No") with a brief explanation of the key factors that influenced your decision.
+                    "content": f"""You are a recruiter evaluating a candidate's resume against a given job description. Act like a human recruiter—use your intuition and read between the lines to assess the candidate's suitability. 
+
+                    **IMPORTANT MATCHING GUIDELINES:**
+                    - For technical skills: Look for exact matches or very similar technologies
+                    - For core responsibilities: Be FLEXIBLE and generous. If someone has done mobile app development, API work, or similar tasks, consider it a match even if the exact wording differs
+                    - For experience: Consider related experience, not just exact matches
+                    - Don't penalize candidates for slight variations in terminology
+
+                    First, perform a quantitative check to determine if the candidate meets each required skill, responsibility, and screening criterion. Then, provide a qualitative assessment, including inferred skills, project impact, ownership, and transferability, while considering the context beyond what's explicitly stated. Finally, give a recommendation ("Yes" or "No") with a brief explanation of the key factors that influenced your decision.
 
                     ## Job Requirements:
                     {requirements_str}
@@ -148,11 +190,21 @@ Additional Screening Criteria:
         # Parse the response into a dictionary
         analysis = json.loads(response.choices[0].message.content)
         
-        # Calculate score based on the analysis
-        score = calculate_score(analysis)
+        # Log the complete JSON response for debugging
+        print("\n" + "="*80)
+        print("COMPLETE AI RESPONSE JSON:")
+        print("="*80)
+        print(json.dumps(analysis, indent=2))
+        print("="*80)
+        
+        # Calculate both quantitative and semantic scores
+        quantitative_score = calculate_quantitative_score(analysis)
+        semantic_score = calculate_semantic_score(analysis)
         
         return {
-            "score": score,
+            "quantitative_score": quantitative_score,
+            "semantic_score": semantic_score,
+            "score": quantitative_score,  # Keep for backward compatibility
             "analysis": analysis
         }
         
@@ -160,7 +212,7 @@ Additional Screening Criteria:
         print(f"Error in analyze_resume: {str(e)}")
         return None
 
-def calculate_score(analysis):
+def calculate_quantitative_score(analysis):
     """
     Calculates a simple score by counting the number of true values in all boolean fields.
     Returns a string in format "X/Y" where X is the count of true values and Y is the total number of boolean fields.
@@ -212,5 +264,115 @@ def calculate_score(analysis):
         return f"{true_count}/{total_fields}"
         
     except Exception as e:
-        print(f"Error calculating score: {str(e)}")
-        return "0/0" 
+        print(f"Error calculating quantitative score: {str(e)}")
+        return "0/0"
+
+def calculate_semantic_score(analysis):
+    """
+    Uses an LLM to calculate a semantic score based on the qualitative assessment.
+    Returns a percentage (0-100) representing how well the candidate fits the role semantically.
+    """
+    try:
+        # Extract relevant information from the analysis
+        qual_assessment = analysis.get("qualitative_assessment", {})
+        final_recommendation = analysis.get("final_recommendation", "")
+        summary_factors = analysis.get("summary_of_key_factors", [])
+        
+        # Prepare the prompt for LLM scoring
+        assessment_data = {
+            "transferability_to_role": qual_assessment.get("transferability_to_role", "N/A"),
+            "project_gravity": qual_assessment.get("project_gravity", "N/A"),
+            "ownership_and_initiative": qual_assessment.get("ownership_and_initiative", "N/A"),
+            "inferred_skills": qual_assessment.get("inferred_skills_from_projects", []),
+            "recruiter_summary": qual_assessment.get("recruiter_style_summary", ""),
+            "final_recommendation": final_recommendation,
+            "key_factors": summary_factors
+        }
+        
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """You are an expert recruiter tasked with calculating a semantic fit score for a candidate based on their qualitative assessment. 
+
+Your job is to analyze the qualitative factors and provide a numerical score from 0-100 that represents how well this candidate would fit the role semantically (beyond just checking boxes).
+
+Consider these factors in your scoring:
+1. **Transferability to Role** (40% weight) - How well their experience transfers to the specific role
+2. **Project Quality & Impact** (25% weight) - The gravity and real-world impact of their projects  
+3. **Leadership & Ownership** (20% weight) - Their initiative, ownership, and leadership potential
+4. **Skill Relevance** (15% weight) - How relevant their inferred skills are to the role
+
+Scoring Guidelines:
+- 90-100: Exceptional fit, would excel in the role immediately
+- 80-89: Strong fit, would perform very well with minimal onboarding
+- 70-79: Good fit, would perform well with some onboarding
+- 60-69: Moderate fit, has potential but needs development
+- 50-59: Weak fit, significant gaps but some transferable skills
+- 40-49: Poor fit, major skill/experience gaps
+- 0-39: Very poor fit, not suitable for the role
+
+Output ONLY a JSON object with this structure:
+{
+    "semantic_score": 85,
+    "reasoning": "Brief explanation of the score based on the key factors"
+}"""
+                },
+                {
+                    "role": "user", 
+                    "content": f"""Based on the following qualitative assessment, calculate a semantic fit score (0-100):
+
+**Assessment Data:**
+{json.dumps(assessment_data, indent=2)}
+
+Provide a semantic score that reflects how well this candidate would actually perform in the role, considering their experience transferability, project quality, leadership potential, and skill relevance."""
+                }
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3
+        )
+        
+        # Parse the LLM response
+        llm_result = json.loads(response.choices[0].message.content)
+        semantic_score = llm_result.get("semantic_score", 0)
+        reasoning = llm_result.get("reasoning", "")
+        
+        # Log the LLM reasoning for debugging
+        print(f"\n--- LLM SEMANTIC SCORING ---")
+        print(f"Score: {semantic_score}/100")
+        print(f"Reasoning: {reasoning}")
+        print("--- END LLM SCORING ---")
+        
+        # Ensure score is within valid range
+        semantic_score = max(0, min(100, int(semantic_score)))
+        
+        return semantic_score
+        
+    except Exception as e:
+        print(f"Error calculating semantic score with LLM: {str(e)}")
+        # Fallback to a simple rule-based approach if LLM fails
+        try:
+            qual_assessment = analysis.get("qualitative_assessment", {})
+            final_rec = analysis.get("final_recommendation", "").lower()
+            
+            # Simple fallback scoring
+            if final_rec == "yes":
+                base_score = 70
+            else:
+                base_score = 30
+                
+            # Adjust based on transferability
+            transferability = qual_assessment.get("transferability_to_role", "").lower()
+            if "high" in transferability:
+                base_score += 15
+            elif "medium" in transferability:
+                base_score += 5
+            elif "low" in transferability:
+                base_score -= 10
+                
+            return max(0, min(100, base_score))
+            
+        except Exception as fallback_error:
+            print(f"Error in fallback scoring: {str(fallback_error)}")
+            return 50  # Default neutral score 

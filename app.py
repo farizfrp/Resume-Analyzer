@@ -18,8 +18,12 @@ load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Initialize session state for API key verification
+# Auto-apply API key from .env file
+api_key_from_env = os.getenv("OPENAI_API_KEY")
 if 'api_key_verified' not in st.session_state:
-    st.session_state.api_key_verified = False
+    st.session_state.api_key_verified = bool(api_key_from_env)
+if 'api_key_value' not in st.session_state:
+    st.session_state.api_key_value = api_key_from_env or ""
 
 # Initialize other session states
 if "requirements" not in st.session_state:
@@ -33,9 +37,33 @@ if "selected_models" not in st.session_state:
 
 def extract_text_from_pdf(pdf_file):
     text = ""
-    pdf_reader = PyPDF2.PdfReader(pdf_file)
-    for page in pdf_reader.pages:
-        text += page.extract_text()
+    try:
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        for page_num, page in enumerate(pdf_reader.pages):
+            page_text = page.extract_text()
+            text += page_text
+            
+            # Log each page separately for debugging
+            print(f"\n--- PAGE {page_num + 1} TEXT ---")
+            print(page_text[:300] + "..." if len(page_text) > 300 else page_text)
+            print("--- END PAGE ---")
+    
+    except Exception as e:
+        print(f"Error extracting PDF text: {str(e)}")
+        return ""
+    
+    # Clean up the text - remove extra whitespace and normalize
+    text = ' '.join(text.split())
+    
+    # Log the extracted text for debugging
+    print("\n" + "="*80)
+    print(f"EXTRACTED PDF TEXT FROM: {pdf_file.name}")
+    print("="*80)
+    print(f"Total text length: {len(text)} characters")
+    print("First 1000 characters:")
+    print(text[:1000] + "..." if len(text) > 1000 else text)
+    print("="*80)
+    
     return text
 
 def extract_text_from_docx(docx_file):
@@ -348,6 +376,15 @@ def calculate_percentage(score):
     except:
         return 0
 
+def calculate_quantitative_percentage(score):
+    """Convert quantitative score like '10/21' to percentage"""
+    try:
+        numerator, denominator = map(int, score.split('/'))
+        percentage = (numerator / denominator) * 100
+        return round(percentage)
+    except:
+        return 0
+
 def display_contact_info(contact_info):
     """Display candidate contact information in a clean format"""
     # Display name in larger font with custom styling
@@ -382,6 +419,16 @@ def display_contact_info(contact_info):
                 label="Phone",
                 value=contact_info['phone']
             ), unsafe_allow_html=True)
+        if contact_info.get("age") and contact_info['age'] != "N/A":
+            st.markdown(info_style.format(
+                label="Age",
+                value=contact_info['age']
+            ), unsafe_allow_html=True)
+        if contact_info.get("gender") and contact_info['gender'] != "N/A":
+            st.markdown(info_style.format(
+                label="Gender",
+                value=contact_info['gender']
+            ), unsafe_allow_html=True)
             
     with col2:
         if contact_info.get("location"):
@@ -393,6 +440,16 @@ def display_contact_info(contact_info):
             st.markdown(info_style.format(
                 label="LinkedIn",
                 value=f"<a href='{contact_info['linkedin']}' target='_blank' style='color: #8AB4F8;'>Profile ↗</a>"
+            ), unsafe_allow_html=True)
+        if contact_info.get("total_work_experience"):
+            st.markdown(info_style.format(
+                label="Total Experience",
+                value=contact_info['total_work_experience']
+            ), unsafe_allow_html=True)
+        if contact_info.get("last_position"):
+            st.markdown(info_style.format(
+                label="Last Position",
+                value=contact_info['last_position']
             ), unsafe_allow_html=True)
         
     # Display other links if present
@@ -420,6 +477,10 @@ def flatten_analysis_for_csv(analysis):
     flattened['location'] = contact_info.get('location', '')
     flattened['linkedin'] = contact_info.get('linkedin', '')
     flattened['other_links'] = ', '.join(contact_info.get('other_links', []))
+    flattened['age'] = contact_info.get('age', '')
+    flattened['gender'] = contact_info.get('gender', '')
+    flattened['total_work_experience'] = contact_info.get('total_work_experience', '')
+    flattened['last_position'] = contact_info.get('last_position', '')
 
     # Requirement Match - Core Responsibilities (combined in one column)
     req_match = analysis.get('requirement_match', {})
@@ -455,11 +516,21 @@ st.title("Resume Ranking System")
 # API Key Verification Section
 st.header("🔐 API Key Verification")
 
-if not st.session_state.api_key_verified:
+# If API key is loaded from .env, skip verification UI
+if st.session_state.api_key_verified and api_key_from_env:
+    st.success("✅ API Key loaded from environment and active")
+    if st.button("Change API Key", key="change_api_key_btn"):
+        st.session_state.api_key_verified = False
+        st.session_state.api_key_value = ""
+        st.rerun()
+elif not st.session_state.api_key_verified:
     # Keep the API key input field enabled
-    api_key = st.text_input("Enter your OpenAI API Key", type="password")
+    api_key = st.text_input("Enter your OpenAI API Key", 
+                           type="password", 
+                           key="api_key_input",
+                           value=st.session_state.api_key_value)
     
-    if st.button("Verify API Key"):
+    if st.button("Verify API Key", key="verify_api_key_btn"):
         if api_key:
             try:
                 # Try to create a client and make a simple API call
@@ -471,6 +542,7 @@ if not st.session_state.api_key_verified:
                 )
                 # If no error, key is valid
                 st.session_state.api_key_verified = True
+                st.session_state.api_key_value = api_key
                 os.environ["OPENAI_API_KEY"] = api_key  # Set the API key
                 st.success("✅ API Key verified successfully!")
                 st.rerun()
@@ -488,21 +560,23 @@ if not st.session_state.api_key_verified:
     st.selectbox(
         "Choose the primary model (general purpose)",
         ["gpt-4.1", "gpt-4.0", "gpt-3.5-turbo"],
-        disabled=True
+        disabled=True,
+        key="disabled_model_1"
     )
     st.selectbox(
         "Choose a reasoning-focused model",
         ["o4-mini", "o1-mini", "o1-preview"],
-        disabled=True
+        disabled=True,
+        key="disabled_model_2"
     )
-    st.button("Update Models", disabled=True)
+    st.button("Update Models", disabled=True, key="disabled_update_models")
     
     st.divider()
     
     # Job Description Section (disabled)
     st.header("Job Description Analysis")
-    st.text_area("Enter Job Description:", height=200, disabled=True)
-    st.button("Analyze Job Description", disabled=True)
+    st.text_area("Enter Job Description:", height=200, disabled=True, key="disabled_job_desc")
+    st.button("Analyze Job Description", disabled=True, key="disabled_analyze_jd")
     
     st.divider()
     
@@ -510,16 +584,11 @@ if not st.session_state.api_key_verified:
     st.header("Resume Analysis")
     st.file_uploader("Upload Resumes (PDF, DOCX, or TXT)", 
                     accept_multiple_files=True,
-                    disabled=True)
-    st.button("Analyze Resumes", disabled=True)
+                    disabled=True,
+                    key="disabled_file_upload")
+    st.button("Analyze Resumes", disabled=True, key="disabled_analyze_resumes")
     
     st.stop()  # Stop here if not verified
-
-# If verified, show the rest of the app
-st.success("✅ API Key verified and active")
-if st.button("Change API Key"):
-    st.session_state.api_key_verified = False
-    st.rerun()
 
 st.divider()
 
@@ -528,15 +597,17 @@ st.header("Model Selection")
 
 model_1 = st.selectbox(
     "Choose the primary model (general purpose)",
-    ["gpt-4.1", "gpt-4.0", "gpt-3.5-turbo"]
+    ["gpt-4.1", "gpt-4.0", "gpt-3.5-turbo"],
+    key="primary_model_select"
 )
 
 model_2 = st.selectbox(
     "Choose a reasoning-focused model",
-    ["o4-mini", "o1-mini", "o1-preview"]
+    ["o4-mini", "o1-mini", "o1-preview"],
+    key="reasoning_model_select"
 )
 
-if st.button("Update Models"):
+if st.button("Update Models", key="update_models_btn"):
     st.session_state.selected_models = {
         "primary": model_1,
         "reasoning": model_2
@@ -551,9 +622,10 @@ st.header("Job Description Analysis")
 # Keep job description input visible
 job_description = st.text_area("Enter Job Description:", 
                           value=st.session_state.job_description if st.session_state.job_description else "",
-                          height=200)
+                          height=200,
+                          key="job_description_input")
 
-if st.button("Analyze Job Description"):
+if st.button("Analyze Job Description", key="analyze_jd_btn"):
     if not job_description:
         st.error("Please provide a job description.")
     else:
@@ -574,15 +646,18 @@ if st.session_state.formatted_reqs:
     st.subheader("Edit Requirements")
     must_have_edit = st.text_area("Must-Have Requirements:", 
                        value=st.session_state.formatted_reqs["must_have"],
-                       height=200)
+                       height=200,
+                       key="must_have_edit")
     preferred_edit = st.text_area("Preferred Requirements:", 
                        value=st.session_state.formatted_reqs["preferred"],
-                       height=200)
+                       height=200,
+                       key="preferred_edit")
     additional_edit = st.text_area("Additional Screening Criteria:", 
                         value=st.session_state.formatted_reqs["additional"],
-                        height=200)
+                        height=200,
+                        key="additional_edit")
     
-    if st.button("Update Requirements"):
+    if st.button("Update Requirements", key="update_requirements_btn"):
         edited_requirements = parse_edited_requirements(must_have_edit, preferred_edit, additional_edit)
         if edited_requirements:
             edited_requirements["original_job_description"] = st.session_state.job_description
@@ -597,9 +672,10 @@ st.divider()
 if st.session_state.requirements is not None:
     st.header("Resume Analysis")
     uploaded_files = st.file_uploader("Upload Resumes (PDF, DOCX, or TXT)", 
-                                    accept_multiple_files=True)
+                                    accept_multiple_files=True,
+                                    key="resume_file_upload")
     
-    if uploaded_files and st.button("Analyze Resumes"):
+    if uploaded_files and st.button("Analyze Resumes", key="analyze_resumes_btn"):
         # Initialize session state for results if not exists
         if 'resume_results' not in st.session_state:
             st.session_state.resume_results = []
@@ -621,17 +697,32 @@ if st.session_state.requirements is not None:
         for idx, file in enumerate(uploaded_files, 1):
             with st.spinner(f"Analyzing {file.name}..."):
                 resume_text = process_file(file)
+                
+                # Log the processed text for debugging
+                print("\n" + "="*80)
+                print(f"PROCESSED TEXT FOR AI ANALYSIS - FILE: {file.name}")
+                print("="*80)
+                print(f"Text length: {len(resume_text)} characters")
+                print("First 500 characters:")
+                print(resume_text[:500])
+                print("="*80)
+                
                 analysis = analyze_resume(resume_text, st.session_state.requirements, model=st.session_state.selected_models["reasoning"])
                 
                 if analysis:
-                    # Calculate percentage score
-                    percentage = calculate_percentage(analysis['score'])
+                    # Calculate both percentage scores
+                    quantitative_percentage = calculate_quantitative_percentage(analysis['quantitative_score'])
+                    semantic_percentage = analysis.get('semantic_score', 0)
                     
                     # Store results
                     result = {
                         'filename': file.name,
-                        'percentage': percentage,
-                        'score': analysis['score'],
+                        'quantitative_percentage': quantitative_percentage,
+                        'semantic_percentage': semantic_percentage,
+                        'percentage': semantic_percentage,  # Use semantic as main percentage
+                        'quantitative_score': analysis['quantitative_score'],
+                        'semantic_score': analysis['semantic_score'],
+                        'score': analysis['score'],  # Keep for backward compatibility
                         'analysis': analysis['analysis']
                     }
                     st.session_state.resume_results.append(result)
@@ -639,7 +730,9 @@ if st.session_state.requirements is not None:
                     # Flatten and store data for CSV
                     flattened_data = flatten_analysis_for_csv(analysis['analysis'])
                     flattened_data['filename'] = file.name
-                    flattened_data['percentage'] = percentage
+                    flattened_data['quantitative_percentage'] = quantitative_percentage
+                    flattened_data['semantic_percentage'] = semantic_percentage
+                    flattened_data['percentage'] = semantic_percentage  # Use semantic as main percentage
                     st.session_state.csv_data.append(flattened_data)
                     
                     # Update progress
@@ -647,11 +740,19 @@ if st.session_state.requirements is not None:
                     
                     # Display result in the single results section
                     with results_section:
-                        with st.expander(f"{file.name} - {percentage}%", expanded=True):
+                        with st.expander(f"{file.name} - {semantic_percentage}% (Semantic: {semantic_percentage}% | Quantitative: {quantitative_percentage}%)", expanded=True):
                             # Display contact information first
                             if 'contact_info' in analysis['analysis']:
+                                # Debug: Print contact info to console
+                                print(f"\n--- CONTACT INFO FOR {file.name} ---")
+                                print(json.dumps(analysis['analysis']['contact_info'], indent=2))
+                                print("--- END CONTACT INFO ---")
+                                
                                 display_contact_info(analysis['analysis']['contact_info'])
                                 st.divider()
+                            else:
+                                print(f"\n--- NO CONTACT INFO FOUND FOR {file.name} ---")
+                                st.warning("⚠️ No contact information could be extracted from this resume.")
                             
                             # Display requirements match
                             display_simple_minimal_requirements(analysis['analysis'])

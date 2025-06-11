@@ -22,7 +22,7 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
-
+*.csv
 # Virtual Environment
 venv/
 ENV/
