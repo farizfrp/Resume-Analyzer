@@ -4,8 +4,13 @@ port = 8008
 enableWebsockets = false
 enableCORS = false
 address = "0.0.0.0"
+allowRunOnSave = false
+runOnSave = false
 
 [browser]
 serverAddress = "alpha-ats.boga.co.id"
 serverPort = 443
-gatherUsageStats = false 
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal" 
