@@ -123,7 +123,7 @@ def flatten_analysis_for_csv(analysis):
     must_have = req_match.get('must_have_requirements', {})
     core_resp = must_have.get('core_responsibilities', {})
     flattened['core_responsibilities'] = ', '.join([f"{k}: {str(v)}" for k, v in core_resp.items()])
-    print(f"Core responsibilities: {flattened['core_responsibilities']}")
+
     # Additional Skills (combined in one column)
     good_to_have = req_match.get('good_to_have_requirements', {})
     add_skills = good_to_have.get('additional_skills', {})
